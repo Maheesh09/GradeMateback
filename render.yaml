@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: grademate-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: https://gradematelk.vercel.app,https://*.vercel.app
+      # Add your database configuration here
+      # - key: DB_HOST
+      #   value: your-database-host
+      # - key: DB_USER
+      #   value: your-database-user
+      # - key: DB_PASS
+      #   value: your-database-password
+      # - key: DB_NAME
+      #   value: your-database-name
