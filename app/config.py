@@ -3,20 +3,29 @@ from typing import List
 import os
 
 class Settings(BaseSettings):
-    DB_HOST: str = "127.0.0.1"
-    DB_PORT: int = 3306
-    DB_USER: str = "root"
-    DB_PASS: str = "password"
-    DB_NAME: str = "hackathon_db"
-    
     # Environment
     ENVIRONMENT: str = "development"  # development, production
+    
+    # Database settings
+    DATABASE_URL: str = "mysql+pymysql://root:Maheesha%40123@localhost:3306/grademate"
+    DATABASE_HOST: str = "localhost"
+    DATABASE_PORT: int = 3306
+    DATABASE_NAME: str = "grademate"
+    DATABASE_USER: str = "root"
+    DATABASE_PASSWORD: str = "Maheesha@123"
     
     # CORS settings - can be overridden by environment variable
     CORS_ORIGINS: str = "http://127.0.0.1:3000,http://localhost:3000,https://gradematelk.vercel.app,https://*.vercel.app"
     
     # Render specific settings
     RENDER_EXTERNAL_URL: str = ""  # Will be set by Render automatically
+    
+    @property
+    def database_url(self) -> str:
+        """Construct database URL from components"""
+        if self.DATABASE_URL and self.DATABASE_URL != "mysql+pymysql://root:password@localhost:3306/grademate":
+            return self.DATABASE_URL
+        return f"mysql+pymysql://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"
     
     @property
     def cors_origins_list(self) -> List[str]:

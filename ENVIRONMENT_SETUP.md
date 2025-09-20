@@ -5,13 +5,6 @@
 Create a `.env` file in the Backend directory with the following variables:
 
 ```bash
-# Database Configuration
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=root
-DB_PASS=password
-DB_NAME=hackathon_db
-
 # Environment
 ENVIRONMENT=development
 
@@ -51,13 +44,6 @@ Set these environment variables in your Render dashboard:
 ENVIRONMENT=production
 CORS_ORIGINS=https://gradematelk.vercel.app,https://*.vercel.app
 
-# Database (update with your production database)
-DB_HOST=your-production-db-host
-DB_PORT=3306
-DB_USER=your-db-user
-DB_PASS=your-db-password
-DB_NAME=your-db-name
-
 # Render automatically sets:
 # PORT (automatically set by Render)
 # RENDER_EXTERNAL_URL (automatically set by Render)
@@ -90,8 +76,32 @@ The backend automatically configures CORS based on environment:
 - `start.py` - Production startup script
 - `requirements.txt` - Python dependencies
 
-## Security Notes
+## Important Notes
 
-- CORS origins are explicitly configured (no wildcard `*`)
-- Credentials are allowed for authentication
-- Environment-specific configurations prevent development settings in production
+- **No Database Required**: This backend now uses in-memory storage for demo purposes
+- **Data Persistence**: Data is not persisted between server restarts
+- **CORS Configuration**: Origins are explicitly configured (no wildcard `*`)
+- **Credentials**: Allowed for authentication
+- **Environment-Specific**: Configurations prevent development settings in production
+
+## Current API Endpoints
+
+The backend now only provides:
+- **PDF Upload & Processing** - Upload answer sheets and extract questions/answers
+- **Health Check** - Basic health monitoring endpoint
+
+## Removed Features
+
+The following API endpoints have been removed:
+- Student management
+- Paper management  
+- Question management
+- Marking scheme management
+- Submission management
+- Answer management
+
+## Data Storage
+
+- **No persistent storage** - All data processing is temporary
+- **PDF Processing** - Files are processed and results returned immediately
+- **No database required** - Simplified deployment

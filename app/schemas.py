@@ -1,132 +1,94 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Any
 from datetime import datetime
-from .models import QuestionType, ReviewStatus
+import enum
 
-# -------- Students --------
-class StudentCreate(BaseModel):
-    student_id: str
-    name: str
+# -------- Enums --------
+class QuestionType(str, enum.Enum):
+    MCQ = "MCQ"
+    SHORT = "SHORT"
+    ESSAY = "ESSAY"
 
-class StudentRead(BaseModel):
-    student_id: str
-    name: str
-    class Config: from_attributes = True
+class ReviewStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    RESOLVED = "RESOLVED"
 
-# -------- Model Papers --------
-class PaperCreate(BaseModel):
-    subject_name: str
-    paper_no: int
-    part: Optional[str] = None
-    is_results_released: Optional[bool] = False
-    is_reasoning_visible: Optional[bool] = True
-    layout_json: Optional[Any] = None
+# -------- Database Schemas --------
+class AnswerBase(BaseModel):
+    roman_text: str = Field(..., description="Roman numeral text (i, ii, iii, etc.)")
+    part_no: int = Field(..., ge=1, le=50, description="Numeric part number (1 for i, 2 for ii, etc.)")
+    answer_text: str = Field(..., description="The actual answer text")
 
-class PaperRead(PaperCreate):
-    id: int
-    created_at: Optional[datetime]
-    class Config: from_attributes = True
+class AnswerCreate(AnswerBase):
+    pass
 
-# -------- Questions --------
-class QuestionCreate(BaseModel):
-    paper_id: int
-    qno: int
-    type: QuestionType
-    text: str
-    options: Optional[Any] = None
-    answer_key: Optional[str] = None
-    max_marks: Optional[int] = 1
-    rubric: Optional[Any] = None
-
-class QuestionRead(QuestionCreate):
-    id: int
-    class Config: from_attributes = True
-
-# -------- Schemes --------
-class SchemeCreate(BaseModel):
-    paper_id: int
-    name: str
-    version: int
-    is_active: Optional[bool] = True
-    notes: Optional[str] = None
-
-class SchemeRead(SchemeCreate):
-    id: int
-    created_at: Optional[datetime]
-    class Config: from_attributes = True
-
-class SchemeQuestionCreate(BaseModel):
-    scheme_id: int
-    question_id: int
-    max_marks: int
-    notes: Optional[str] = None
-
-class SchemeQuestionRead(SchemeQuestionCreate):
-    id: int
-    class Config: from_attributes = True
-
-class SchemeMCQKeyCreate(BaseModel):
-    scheme_question_id: int
-    option_code: str
-    is_correct: Optional[bool] = True
-    partial_credit: Optional[int] = 0
-    rationale: Optional[str] = None
-
-class SchemeMCQKeyRead(SchemeMCQKeyCreate):
-    id: int
-    class Config: from_attributes = True
-
-class SchemePointCreate(BaseModel):
-    scheme_question_id: int
-    point_order: int
-    description: str
-    keywords: Optional[List[str]] = None
-    marks: int
-    required: Optional[bool] = False
-
-class SchemePointRead(SchemePointCreate):
-    id: int
-    class Config: from_attributes = True
-
-# -------- Submissions & Answers --------
-class SubmissionCreate(BaseModel):
-    paper_id: int
-    student_id: str
-    is_visible_to_student: Optional[bool] = None
-
-class SubmissionRead(SubmissionCreate):
-    id: int
-    total_marks: int
-    created_at: Optional[datetime]
-    class Config: from_attributes = True
-
-class AnswerCreate(BaseModel):
-    submission_id: int
-    question_id: int
-    scheme_question_id: Optional[int] = None
-    response_text: Optional[str] = None
-    chosen_option: Optional[str] = None
-    reasoning: Optional[str] = None
-    omr_json: Optional[Any] = None
-    ocr_text: Optional[str] = None
-    ocr_conf: Optional[float] = Field(None, ge=0, le=1)
-    flags: Optional[Any] = None
-    image_crop_path: Optional[str] = None
-
-class AnswerRead(AnswerCreate):
-    id: int
-    score: int
-    class Config: from_attributes = True
-
-# -------- Reviews --------
-class ReviewCreate(BaseModel):
+class Answer(AnswerBase):
     answer_id: int
-    status: ReviewStatus
-    reviewer: Optional[str] = None
-    resolution: Optional[str] = None
+    question_id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
-class ReviewRead(ReviewCreate):
-    id: int
-    created_at: Optional[datetime]
-    resolved_at: Optional[datetime]
-    class Config: from_attributes = True
+class QuestionBase(BaseModel):
+    main_no: int = Field(..., description="Main question number")
+
+class QuestionCreate(QuestionBase):
+    answers: List[AnswerCreate] = Field(default_factory=list, description="List of answers for this question")
+
+class Question(QuestionBase):
+    question_id: int
+    pdf_id: int
+    created_at: datetime
+    answers: List[Answer] = Field(default_factory=list)
+    
+    class Config:
+        from_attributes = True
+
+class PDFBase(BaseModel):
+    pdf_name: str = Field(..., description="Name of the PDF file")
+
+class PDFCreate(PDFBase):
+    questions: List[QuestionCreate] = Field(default_factory=list, description="List of questions in the PDF")
+
+class PDF(PDFBase):
+    pdf_id: int
+    uploaded_at: datetime
+    questions: List[Question] = Field(default_factory=list)
+    
+    class Config:
+        from_attributes = True
+
+# -------- Upload Response Schemas --------
+class UploadResponse(BaseModel):
+    filename: str
+    extracted_text: str
+    parsed_questions: dict
+    question_count: int
+    status: str
+    pdf_id: Optional[int] = None  # Added to return the created PDF ID
+
+class BatchUploadResponse(BaseModel):
+    results: List[dict]
+    total_files: int
+    successful: int
+    failed: int
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+
+# -------- API Response Schemas --------
+class PDFListResponse(BaseModel):
+    pdfs: List[PDF]
+    total: int
+
+class QuestionListResponse(BaseModel):
+    questions: List[Question]
+    total: int
+    pdf_id: int
+
+class AnswerListResponse(BaseModel):
+    answers: List[Answer]
+    total: int
+    question_id: int

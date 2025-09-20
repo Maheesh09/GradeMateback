@@ -1,26 +1,60 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import QueuePool
 from .config import settings
+from .models import Base
+import logging
 
-# Use SQLite for testing - no database server required
-DATABASE_URL = "mysql+aiomysql://root:Maheesha%40123@localhost:3306/hackathon_db"
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Uncomment the line below to use MySQL (requires MySQL server running)
-# DATABASE_URL = (
-#     f"mysql+aiomysql://{settings.DB_USER}:{settings.DB_PASS}"
-#     f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-# )
-
-engine = create_async_engine(DATABASE_URL, echo=False, future=True)
-
-AsyncSessionLocal = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
+# Create database engine
+engine = create_engine(
+    settings.database_url,
+    poolclass=QueuePool,
+    pool_size=10,
+    max_overflow=20,
+    pool_pre_ping=True,
+    echo=settings.ENVIRONMENT == "development"  # Log SQL queries in development
 )
 
-Base = declarative_base()
+# Create session factory
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
+def create_tables():
+    """Create all tables in the database"""
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {e}")
+        raise
+
+def get_db() -> Session:
+    """
+    Dependency to get database session
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_db_session() -> Session:
+    """
+    Get a database session for direct use
+    """
+    return SessionLocal()
+
+def test_connection():
+    """Test database connection"""
+    try:
+        with engine.connect() as connection:
+            from sqlalchemy import text
+            connection.execute(text("SELECT 1"))
+        logger.info("Database connection successful")
+        return True
+    except Exception as e:
+        logger.error(f"Database connection failed: {e}")
+        return False

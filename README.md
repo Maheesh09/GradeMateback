@@ -1,14 +1,17 @@
 # GradeMate Backend
 
-This is the FastAPI backend for the GradeMate application, which handles PDF uploads and text extraction for answer sheets.
+This is the FastAPI backend for the GradeMate application, which handles PDF uploads and text extraction for answer sheets with full database integration.
 
 ## Features
 
 - PDF upload and processing
 - Text extraction from answer sheets using PyMuPDF
 - Question and answer parsing from structured PDFs
+- MySQL database integration with SQLAlchemy
 - RESTful API endpoints for all operations
-- Database integration with SQLAlchemy
+- Data persistence with proper relationships
+- Roman numeral validation and conversion
+- Comprehensive CRUD operations
 
 ## Setup
 
@@ -28,16 +31,18 @@ This is the FastAPI backend for the GradeMate application, which handles PDF upl
    pip install -r requirements.txt
    ```
 
-2. **Configure database:**
-   - Update `app/config.py` with your database credentials
-   - Or create a `.env` file with:
+2. **Setup database:**
+   - Create MySQL database: `CREATE DATABASE grademate;`
+   - Create `.env` file with your database credentials:
      ```
-     DB_HOST=127.0.0.1
-     DB_PORT=3306
-     DB_USER=root
-     DB_PASS=password
-     DB_NAME=hackathon_db
+     DATABASE_HOST=localhost
+     DATABASE_PORT=3306
+     DATABASE_NAME=grademate
+     DATABASE_USER=root
+     DATABASE_PASSWORD=your_password
+     ENVIRONMENT=development
      ```
+   - Run database setup: `python setup_database.py`
 
 3. **Start the server:**
    ```bash
@@ -52,24 +57,27 @@ This is the FastAPI backend for the GradeMate application, which handles PDF upl
 
 ### Upload Endpoints
 
-- `POST /upload/answer-sheet` - Upload a single answer sheet PDF
-- `POST /upload/answer-sheet-batch` - Upload multiple answer sheet PDFs
+- `POST /upload/answer-sheet` - Upload a single answer sheet PDF (saves to database)
+- `POST /upload/answer-sheet-batch` - Upload multiple answer sheet PDFs (saves to database)
 - `GET /upload/health` - Health check
 
-### Other Endpoints
+### Data Retrieval Endpoints
 
-- `POST /students/` - Create a student
-- `GET /students/` - Get all students
-- `POST /papers/` - Create a paper
-- `GET /papers/` - Get all papers
-- `POST /questions/` - Create a question
-- `GET /questions/` - Get questions
-- `POST /schemes/` - Create a marking scheme
-- `GET /schemes/` - Get marking schemes
-- `POST /submissions/` - Create a submission
-- `GET /submissions/` - Get submissions
-- `POST /answers/` - Create an answer
-- `GET /answers/` - Get answers
+- `GET /data/pdfs` - Get all PDFs (with pagination)
+- `GET /data/pdfs/{pdf_id}` - Get a specific PDF with questions and answers
+- `DELETE /data/pdfs/{pdf_id}` - Delete a PDF and all its data
+- `GET /data/pdfs/{pdf_id}/questions` - Get all questions for a PDF
+- `GET /data/questions/{question_id}` - Get a specific question with answers
+- `DELETE /data/questions/{question_id}` - Delete a question and its answers
+- `GET /data/questions/{question_id}/answers` - Get all answers for a question
+- `GET /data/answers/{answer_id}` - Get a specific answer
+- `DELETE /data/answers/{answer_id}` - Delete an answer
+- `GET /data/search/pdf?name={pdf_name}` - Search for a PDF by name
+
+### System Endpoints
+
+- `GET /` - Root endpoint
+- `GET /health` - System health check with database status
 
 ## PDF Processing
 
@@ -89,6 +97,16 @@ The system will extract:
 - Raw text from the PDF
 - Structured questions and answers
 - Question numbers and sub-parts
+- Save all data to MySQL database with proper relationships
+
+## Database Schema
+
+The application uses three main tables:
+- `pdfs`: Stores PDF metadata
+- `questions`: Stores main question numbers for each PDF
+- `answers`: Stores Roman numeral subparts and answer text
+
+See `DATABASE_SETUP.md` for detailed database information.
 
 ## Development
 
@@ -97,7 +115,22 @@ The backend uses:
 - SQLAlchemy for database ORM
 - PyMuPDF (fitz) for PDF processing
 - Pydantic for data validation
+- MySQL for data persistence
 
 ## Testing
 
-You can test the API using the interactive docs at `http://localhost:8000/docs` when the server is running.
+1. **Test database integration:**
+   ```bash
+   python test_database.py
+   ```
+
+2. **Test API endpoints:**
+   - Interactive docs: `http://localhost:8000/docs`
+   - Health check: `http://localhost:8000/health`
+
+3. **Test PDF upload:**
+   ```bash
+   curl -X POST "http://localhost:8000/upload/answer-sheet" \
+     -H "Content-Type: multipart/form-data" \
+     -F "file=@sample.pdf"
+   ```
